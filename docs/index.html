@@ -1,24 +1,19 @@
-const cards = [
-  { native: "Привет", translated: "Hallo" },
-  { native: "Спасибо", translated: "Danke" },
-  { native: "Как дела?", translated: "Wie geht’s?" }
-];
-
-let current = 0;
-
-function loadCard() {
-  document.getElementById("native").textContent = cards[current].native;
-  document.getElementById("translated").textContent = cards[current].translated;
-  document.getElementById("translated").style.display = "none";
-}
-
-function showTranslation() {
-  document.getElementById("translated").style.display = "block";
-}
-
-function nextCard() {
-  current = (current + 1) % cards.length;
-  loadCard();
-}
-
-window.onload = loadCard;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LangPop</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Перевод карточек</h1>
+    <div class="phrase" id="native">Привет</div>
+    <div class="translation" id="translated">Hallo</div>
+    <button onclick="showTranslation()">Показать перевод</button>
+    <button onclick="nextCard()">Следующая</button>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
