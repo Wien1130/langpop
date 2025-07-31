@@ -1,7 +1,7 @@
-let cards = [
+let cards = JSON.parse(localStorage.getItem("cards")) || [
   { native: "Привет", translated: "Hallo" },
   { native: "Спасибо", translated: "Danke" },
-  { native: "Как дела?", translated: "Wie geht's?" }
+  { native: "Как дела?", translated: "Wie geht’s?" }
 ];
 
 let current = 0;
@@ -22,16 +22,19 @@ function nextCard() {
 }
 
 function addCard() {
-  const nativeInput = document.getElementById("nativeInput").value.trim();
-  const translatedInput = document.getElementById("translatedInput").value.trim();
+  const native = document.getElementById("nativeInput").value.trim();
+  const translated = document.getElementById("translatedInput").value.trim();
 
-  if (nativeInput && translatedInput) {
-    cards.push({ native: nativeInput, translated: translatedInput });
-    alert("Карточка добавлена!");
+  if (native && translated) {
+    cards.push({ native, translated });
+    localStorage.setItem("cards", JSON.stringify(cards));
+
     document.getElementById("nativeInput").value = "";
     document.getElementById("translatedInput").value = "";
+
+    alert("Карточка добавлена!");
   } else {
-    alert("Пожалуйста, заполните оба поля.");
+    alert("Пожалуйста, введите слово и перевод.");
   }
 }
 
