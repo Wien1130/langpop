@@ -1,65 +1,70 @@
-let cards = JSON.parse(localStorage.getItem("cards")) || [
+let cards = [
   { native: "Привет", translated: "Hallo" },
   { native: "Спасибо", translated: "Danke" },
-  { native: "Как дела?", translated: "Wie geht’s?" }
+  { native: "Пока", translated: "Tschüss" }
 ];
 
-let current = 0;
+let currentIndex = 0;
 
-function loadCard() {
-  document.getElementById("native").textContent = cards[current].native;
-  document.getElementById("translated").textContent = cards[current].translated;
-  document.getElementById("translated").style.display = "none";
+// Показываем начальное слово
+function showCard() {
+  document.getElementById("native").innerText = cards[currentIndex].native;
+  document.getElementById("translated").innerText = "•••";
+  hideEditFields();
 }
 
+// Показать перевод
 function showTranslation() {
-  document.getElementById("translated").style.display = "block";
+  document.getElementById("translated").innerText = cards[currentIndex].translated;
 }
 
+// Следующая карточка
 function nextCard() {
-  current = (current + 1) % cards.length;
-  loadCard();
+  currentIndex = (currentIndex + 1) % cards.length;
+  showCard();
 }
 
+// Добавить новую карточку
 function addCard() {
   const native = document.getElementById("nativeInput").value.trim();
   const translated = document.getElementById("translatedInput").value.trim();
 
   if (native && translated) {
     cards.push({ native, translated });
-    localStorage.setItem("cards", JSON.stringify(cards));
-
     document.getElementById("nativeInput").value = "";
     document.getElementById("translatedInput").value = "";
-
     alert("Карточка добавлена!");
   } else {
-    alert("Пожалуйста, введите слово и перевод.");
+    alert("Введите оба поля!");
   }
 }
 
-window.onload = loadCard;
-let editIndex = null;
-
-// Функция: включить режим редактирования текущей карточки
+// Редактировать текущую карточку
 function editCard() {
-  editIndex = currentIndex;
-  const currentCard = cards[editIndex];
-  document.getElementById("editNative").value = currentCard.native;
-  document.getElementById("editTranslated").value = currentCard.translated;
-  document.querySelector(".edit-fields").style.display = "block";
+  document.getElementById("editFields").style.display = "block";
+  document.getElementById("editNative").value = cards[currentIndex].native;
+  document.getElementById("editTranslated").value = cards[currentIndex].translated;
 }
 
-// Функция: сохранить изменения
+// Сохранить изменения
 function saveEdit() {
   const newNative = document.getElementById("editNative").value.trim();
   const newTranslated = document.getElementById("editTranslated").value.trim();
-  if (newNative && newTranslated && editIndex !== null) {
-    cards[editIndex] = { native: newNative, translated: newTranslated };
-    currentIndex = editIndex;
+
+  if (newNative && newTranslated) {
+    cards[currentIndex] = { native: newNative, translated: newTranslated };
     showCard();
-    document.querySelector(".edit-fields").style.display = "none";
-    editIndex = null;
+    alert("Карточка обновлена!");
+  } else {
+    alert("Поля не должны быть пустыми.");
   }
 }
+
+// Скрыть форму редактирования
+function hideEditFields() {
+  document.getElementById("editFields").style.display = "none";
+}
+
+// При старте
+showCard();
 
