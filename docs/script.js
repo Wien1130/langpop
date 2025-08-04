@@ -39,3 +39,27 @@ function addCard() {
 }
 
 window.onload = loadCard;
+let editIndex = null;
+
+// Функция: включить режим редактирования текущей карточки
+function editCard() {
+  editIndex = currentIndex;
+  const currentCard = cards[editIndex];
+  document.getElementById("editNative").value = currentCard.native;
+  document.getElementById("editTranslated").value = currentCard.translated;
+  document.querySelector(".edit-fields").style.display = "block";
+}
+
+// Функция: сохранить изменения
+function saveEdit() {
+  const newNative = document.getElementById("editNative").value.trim();
+  const newTranslated = document.getElementById("editTranslated").value.trim();
+  if (newNative && newTranslated && editIndex !== null) {
+    cards[editIndex] = { native: newNative, translated: newTranslated };
+    currentIndex = editIndex;
+    showCard();
+    document.querySelector(".edit-fields").style.display = "none";
+    editIndex = null;
+  }
+}
+
