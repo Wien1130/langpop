@@ -1,0 +1,379 @@
+import React, { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Globe, Mic, Image as ImgIcon, Plus, Star, Trophy, Sparkles, Settings, Check, X, Camera, PlayCircle, Database, Cloud, Crown, CreditCard, ChevronRight, Languages, BarChart3, Clock } from "lucide-react";
+
+/**
+ * LangPop — интерактивный прототип ТЗ в одном файле
+ * - Визуальные 5 этапов SRS: Сегодня, Завтра, Неделя, Месяц, Выучено
+ * - Анимация перемещения карточек между этапами
+ * - Добавление карточек: вручную, фото (заглушка OCR), голос (заглушка STT), ген. картинок (заглушка)
+ * - Автоопределение языка интерфейса
+ * - Проверка произношения (заглушка оценки)
+ * - Дашборд прогресса, ачивки, челленджи
+ * - Обучающие видео (заглушки)
+ * - Облако/личный кабинет (заглушки)
+ * - Монетизация: баннер подписки
+ */
+
+const STAGES = ["Сегодня", "Завтра", "Неделя", "Месяц", "Выучено"] as const;
+
+type Stage = typeof STAGES[number];
+
+type Flashcard = {
+  id: string;
+  term: string;
+  translation?: string;
+  description?: string;
+  image?: string; // base64/URL
+  stage: Stage;
+  score: number; // 0..100 — для произношения/успехов
+  createdAt: number;
+  reviews: number;
+};
+
+function useBrowserLang() {
+  const [lang, setLang] = useState("en");
+  useEffect(() => {
+    const navLang = navigator?.language || "en";
+    setLang(navLang);
+  }, []);
+  return lang;
+}
+
+const demoCards: Flashcard[] = [
+  { id: "1", term: "Apple", translation: "Яблоко", description: "Существительное, фрукт", stage: "Сегодня", score: 20, createdAt: Date.now(), reviews: 0 },
+  { id: "2", term: "Bike", translation: "Велосипед", description: "Существительное, транспорт", stage: "Завтра", score: 40, createdAt: Date.now(), reviews: 1 },
+  { id: "3", term: "Quiet", translation: "Тихий", description: "Прилагательное", stage: "Неделя", score: 60, createdAt: Date.now(), reviews: 2 },
+  { id: "4", term: "Respect", translation: "Уважение", description: "Существительное", stage: "Месяц", score: 80, createdAt: Date.now(), reviews: 3 },
+  { id: "5", term: "Freedom", translation: "Свобода", description: "Существительное", stage: "Выучено", score: 95, createdAt: Date.now(), reviews: 5 },
+];
+
+function StageColumn({ stage, cards, onAdvance, onRegress, onMic }: {
+  stage: Stage;
+  cards: Flashcard[];
+  onAdvance: (id: string) => void;
+  onRegress: (id: string) => void;
+  onMic: (id: string) => void;
+}) {
+  const hint = {
+    Сегодня: "Карточки для повторения сейчас",
+    Завтра: "Автоматически появятся завтра",
+    Неделя: "Следующая точка — через 7 дней",
+    Месяц: "Дальняя проверка",
+    Выучено: "Можно повторять для закрепления",
+  }[stage];
+
+  return (
+    <Card className="flex flex-col h-full rounded-2xl shadow-sm">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <Badge variant={stage === "Сегодня" ? "default" : stage === "Выучено" ? "secondary" : "outline"}>{stage}</Badge>
+          <span className="text-muted-foreground text-sm">{hint}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-3 overflow-y-auto">
+        <AnimatePresence initial={false}>
+          {cards.map((c) => (
+            <motion.div key={c.id}
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-xl border p-3 bg-card">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium text-base">{c.term}</div>
+                  {c.translation && <div className="text-sm text-muted-foreground">{c.translation}</div>}
+                  {c.description && <div className="text-xs text-muted-foreground mt-1">{c.description}</div>}
+                  <Progress value={c.score} className="h-2 mt-2" />
+                </div>
+                <div className="flex flex-col gap-2 items-end">
+                  <Button size="icon" variant="ghost" onClick={() => onMic(c.id)} title="Проверить произношение">
+                    <Mic className="h-4 w-4" />
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => onRegress(c.id)}><X className="h-4 w-4 mr-1"/>Назад</Button>
+                    <Button size="sm" onClick={() => onAdvance(c.id)}><Check className="h-4 w-4 mr-1"/>Дальше</Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+          {cards.length === 0 && (
+            <div className="text-sm text-muted-foreground p-2">Нет карточек</div>
+          )}
+        </AnimatePresence>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function App() {
+  const lang = useBrowserLang();
+  const [cards, setCards] = useState<Flashcard[]>(demoCards);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [addMode, setAddMode] = useState<"text" | "photo" | "voice" | "ai">("text");
+  const [form, setForm] = useState({ term: "", translation: "", description: "" });
+  const [subscribed, setSubscribed] = useState(false);
+
+  const byStage = useMemo(() => {
+    const m: Record<Stage, Flashcard[]> = { Сегодня: [], Завтра: [], Неделя: [], Месяц: [], Выучено: [] };
+    cards.forEach(c => m[c.stage].push(c));
+    return m;
+  }, [cards]);
+
+  const total = cards.length;
+  const learned = byStage["Выучено"].length;
+  const progress = total ? Math.round((learned / total) * 100) : 0;
+
+  function advance(id: string) {
+    setCards(prev => prev.map(c => c.id === id ? { ...c, stage: nextStage(c.stage), reviews: c.reviews + 1, score: Math.min(100, c.score + 15) } : c));
+  }
+  function regress(id: string) {
+    setCards(prev => prev.map(c => c.id === id ? { ...c, stage: prevStage(c.stage), score: Math.max(0, c.score - 10) } : c));
+  }
+  function nextStage(s: Stage): Stage {
+    const i = STAGES.indexOf(s);
+    return STAGES[Math.min(STAGES.length - 1, i + 1)];
+  }
+  function prevStage(s: Stage): Stage {
+    const i = STAGES.indexOf(s);
+    return STAGES[Math.max(0, i - 1)];
+  }
+
+  function addCard() {
+    if (!form.term.trim()) return;
+    const newCard: Flashcard = {
+      id: Math.random().toString(36).slice(2),
+      term: form.term.trim(),
+      translation: form.translation.trim() || undefined,
+      description: form.description.trim() || undefined,
+      stage: "Сегодня",
+      score: 0,
+      createdAt: Date.now(),
+      reviews: 0,
+    };
+    setCards(prev => [newCard, ...prev]);
+    setForm({ term: "", translation: "", description: "" });
+    setOpenAdd(false);
+  }
+
+  // Заглушка "проверки произношения" с псевдооценкой
+  function mockPronounce(id: string) {
+    setCards(prev => prev.map(c => (
+      c.id === id
+        ? { ...c, score: Math.min(100, c.score + 5 + Math.round(Math.random() * 25)) }
+        : c
+    )));
+    alert("Оценка произношения: Хорошо. Продолжай!");
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 md:p-8">
+      {/* Шапка */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-6 w-6" />
+          <h1 className="text-2xl md:text-3xl font-bold">LangPop — интервальные карточки</h1>
+          <Badge variant="secondary" className="hidden md:inline-flex">MVP · Canvas Prototype</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" title="Определённый язык интерфейса"><Globe className="h-4 w-4 mr-1"/> {lang}</Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm"><Settings className="h-4 w-4 mr-2"/>Настройки</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Язык интерфейса</DropdownMenuLabel>
+              <DropdownMenuItem><Languages className="h-4 w-4 mr-2"/>Выбрать язык… (авто)</DropdownMenuItem>
+              <DropdownMenuSeparator/>
+              <DropdownMenuLabel>Аккаунт</DropdownMenuLabel>
+              <DropdownMenuItem><Cloud className="h-4 w-4 mr-2"/>Личный кабинет (облако)</DropdownMenuItem>
+              <DropdownMenuItem><Database className="h-4 w-4 mr-2"/>Синхронизация включена</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Баннер подписки */}
+      {!subscribed && (
+        <Card className="mb-6 rounded-2xl border-dashed">
+          <CardContent className="py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Crown className="h-6 w-6"/>
+              <div>
+                <div className="font-medium">1 месяц бесплатно · затем 1 / 3 / 12 месяцев</div>
+                <CardDescription>Оформите подписку и откройте премиум-функции: расширенная статистика, эксклюзивные коллекции, ИИ-генерация изображений.</CardDescription>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setSubscribed(true)}><CreditCard className="h-4 w-4 mr-2"/>Оформить</Button>
+              <Button variant="ghost">Узнать больше</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Дашборд */}
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Прогресс</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="text-4xl font-bold">{progress}%</div>
+              <div className="text-sm text-muted-foreground">Выучено {learned} из {total} карточек</div>
+            </div>
+            <Progress value={progress} className="h-2 mt-3" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Серия дней</CardTitle></CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Trophy className="h-6 w-6"/>
+            <div>
+              <div className="font-semibold">Streak: 5 дней</div>
+              <CardDescription>Цель недели: 60 карточек · осталось 12</CardDescription>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Статистика</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4"/>Средний балл произношения: 74</div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-2"><Clock className="h-4 w-4"/>Время обучения сегодня: 18 мин</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Основные этапы */}
+      <Tabs defaultValue="board" className="">
+        <TabsList>
+          <TabsTrigger value="board">Интервальные повторения</TabsTrigger>
+          <TabsTrigger value="learn">Обучающие материалы</TabsTrigger>
+          <TabsTrigger value="achievements">Достижения</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="board" className="mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm text-muted-foreground">Перемещайте карточки по мере изучения. Наглядная анимация показывает прогресс.</div>
+            <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2"/>Добавить карточку</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[540px]">
+                <DialogHeader>
+                  <DialogTitle>Новая карточка</DialogTitle>
+                  <DialogDescription>Выберите способ добавления и настройте контент.</DialogDescription>
+                </DialogHeader>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant={addMode === "text" ? "default" : "outline"} onClick={() => setAddMode("text")}><Plus className="h-4 w-4 mr-2"/>Текст</Button>
+                  <Button variant={addMode === "photo" ? "default" : "outline"} onClick={() => setAddMode("photo")}><Camera className="h-4 w-4 mr-2"/>Фото (OCR)</Button>
+                  <Button variant={addMode === "voice" ? "default" : "outline"} onClick={() => setAddMode("voice")}><Mic className="h-4 w-4 mr-2"/>Голос</Button>
+                  <Button variant={addMode === "ai" ? "default" : "outline"} onClick={() => setAddMode("ai")}><Sparkles className="h-4 w-4 mr-2"/>ИИ-изображение</Button>
+                </div>
+                <div className="grid gap-3 mt-2">
+                  <Input placeholder="Слово / фраза" value={form.term} onChange={(e)=>setForm({...form, term: e.target.value})} />
+                  <Input placeholder="Перевод (опционально)" value={form.translation} onChange={(e)=>setForm({...form, translation: e.target.value})} />
+                  <Textarea placeholder="Описание / примечание" value={form.description} onChange={(e)=>setForm({...form, description: e.target.value})} />
+                  <div className="text-xs text-muted-foreground">Заглушки: фото ➝ OCR, голос ➝ STT, ИИ ➝ генерация образа-ассоциации.</div>
+                </div>
+                <DialogFooter>
+                  <Button variant="secondary" onClick={()=>setOpenAdd(false)}>Отмена</Button>
+                  <Button onClick={addCard}>Добавить</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-5">
+            {STAGES.map((stage) => (
+              <StageColumn
+                key={stage}
+                stage={stage}
+                cards={byStage[stage]}
+                onAdvance={advance}
+                onRegress={regress}
+                onMic={mockPronounce}
+              />
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="learn" className="mt-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><PlayCircle className="h-5 w-5"/>Короткое видео: как работает система</CardTitle>
+                <CardDescription>Видео автоматически показывается на родном языке пользователя ({lang}).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="aspect-video rounded-xl bg-muted flex items-center justify-center text-muted-foreground">Видео-заглушка</div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle>Советы по изучению</CardTitle>
+                <CardDescription>Короткие, практичные рекомендации.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-2 text-sm">
+                <div>• Ежедневно 10–15 минут лучше, чем редкие длинные сессии.</div>
+                <div>• Произносите вслух и записывайте для обратной связи.</div>
+                <div>• Добавляйте визуальные ассоциации для сложных слов.</div>
+                <div>• Повторяйте «Выучено» раз в неделю для закрепления.</div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="achievements" className="mt-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { title: "Первые 10 карточек", desc: "Создайте 10 карточек", icon: <Star className="h-5 w-5"/> },
+              { title: "Неделя без пропусков", desc: "Занимайтесь 7 дней подряд", icon: <Trophy className="h-5 w-5"/> },
+              { title: "Мастер произношения", desc: "Средний балл ≥ 85", icon: <Mic className="h-5 w-5"/> },
+            ].map((a, i) => (
+              <Card key={i} className="rounded-2xl">
+                <CardHeader><CardTitle className="flex items-center gap-2">{a.icon}{a.title}</CardTitle></CardHeader>
+                <CardContent><CardDescription>{a.desc}</CardDescription></CardContent>
+                <CardFooter>
+                  <Button variant="secondary" size="sm">Подробнее <ChevronRight className="h-4 w-4 ml-1"/></Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Низ страницы — сжатое ТЗ для разработчиков */}
+      <Card className="mt-8 rounded-2xl">
+        <CardHeader>
+          <CardTitle>Итоговое ТЗ (сжатое)</CardTitle>
+          <CardDescription>Ключевые требования для команды продукта и разработки.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm">
+          <div><b>Интервальные повторения:</b> 5 этапов (Сегодня, Завтра, Неделя, Месяц, Выучено) + анимация, ручной откат/продвижение.</div>
+          <div><b>Добавление карточек:</b> текст, фото(OCR), голос(STT), ИИ-изображения; редактирование; коллекции; теги.</div>
+          <div><b>Языки:</b> автоопределение по устройству; ручной выбор; локализованные видео и пояснения.</div>
+          <div><b>Произношение:</b> запись микрофона; оценка точности; рекомендации; повтор слабых слов.</div>
+          <div><b>Геймификация:</b> ачивки, челленджи, streak, XP; дашборд прогресса и метрик.</div>
+          <div><b>Обучающие материалы:</b> короткие видео 30–60 сек; советы; стартовый онбординг.</div>
+          <div><b>Хранение:</b> облако, синхронизация устройств, личный кабинет.</div>
+          <div><b>Монетизация:</b> 1 мес бесплатно → планы 1/3/12 мес; подарочные подписки; премиум-фичи.</div>
+          <div><b>Технологии (рекомендуемо):</b> React/React Native или Flutter; backend Node/Python; PostgreSQL/Firebase; облако AWS/Firebase; Speech API (Google/Azure); генерация изображений (OpenAI/аналог).</div>
+          <div><b>Цель:</b> 1 000 000 пользователей через UX, геймификацию и визуальный SRS.</div>
+        </CardContent>
+      </Card>
+
+      <footer className="text-xs text-muted-foreground mt-6 text-center">Canvas-прототип. Все интерактивы — демонстрационные.</footer>
+    </div>
+  );
+}
